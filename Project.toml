@@ -4,6 +4,8 @@ authors = ["Maurizio Giordano"]
 version = "0.1.0"
 
 [deps]
+Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
+ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
 ScikitLearnBase = "6e75b9c4-186b-50bd-896f-2d2496a4843e"
 
 [compat]
