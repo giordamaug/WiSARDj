@@ -135,8 +135,7 @@ function predict(dt::WiSARDClassifier, X)
 
 	y_pred = Vector{Any}(undef, n_samples)
 	@showprogress 1 "Testing..."  for i in 1:n_samples
-		response = _test(dt, X[i, :])
-        y_pred[i] = dt.classes[argmax(response)]
+        y_pred[i] = dt.classes[argmax(_test(dt, X[i, :]))]
     end
     return y_pred
 end
