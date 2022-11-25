@@ -72,15 +72,16 @@ get_classes(dt::WiSARDClassifier) = dt.classes
 # Binarize input (thermomer encoding) terand generates address tuple for Ram access
 function _mk_tuple(dt::WiSARDClassifier, data)
     addresses = zeros(Int, dt.n_rams)
-    for i in 1:dt.n_rams
-        for j in 1:dt.n_bits
-            x = dt._mapping[(((i - 1) * dt.n_bits) + j) % (dt.retina_size + 1)]
-            index = ÷(x,dt.n_tics+1)
-            value = ÷((data[index+1] -  dt.offsets[index+1]) * dt.n_tics, dt.ranges[index+1])
-            #println(value,"-",index)
-			if x % (dt.n_tics+1) < value
-                addresses[i] += dt.mypowers[dt.n_bits - j + 1]
+    count = 0
+    for i in 0:dt.n_rams-1
+        for j in 0:dt.n_bits-1
+            x = dt._mapping[(i * dt.n_bits + j) % (dt.retina_size)+1] - 1
+            index = div(x,(dt.n_tics))
+            value = div((data[index+1] -  dt.offsets[index+1]) * dt.n_tics, dt.ranges[index+1])
+			if x % dt.n_tics < value
+                addresses[i+1] += dt.mypowers[dt.n_bits - j]
             end
+            count += 1
 		end
 	end
     return addresses
@@ -89,7 +90,6 @@ end
 function _train(dt::WiSARDClassifier, data::Vector{Float64}, y)
     """ Learning """
     addresses = _mk_tuple(dt,data)
-    #print(addresses)
     for i in 1:dt.n_rams
         updEntry(dt.wiznet[y][i], addresses[i], 1.0)
     end
@@ -99,12 +99,12 @@ function _test(dt::WiSARDClassifier, data::Vector{Float64})
     """ Testing """
     addresses = _mk_tuple(dt,data)
     res = zeros(dt.n_classes, dt.n_rams)
-    for y in dt.n_classes
+    for y in 1:dt.n_classes
     	for i in 1:dt.n_rams
     		res[y,i] = getEntry(dt.wiznet[dt.classes[y]][i], addresses[i]) > 0 ? 1.0 : 0.0  # make it better!
     	end
     end
-    return argmax(sum(res,dims=2))[1]
+    return sum(res,dims=2) #argmax(sum(res,dims=2))[1]
 end
 
 
@@ -118,11 +118,11 @@ function fit!(dt::WiSARDClassifier, X, y)
     for c in dt.classes
     	dt.wiznet[c] = [WRam() for _ in 1:dt.n_rams]
     end
-    dt.mypowers = fill(2,128).^[i for i in range(0,127)] # it canbe better!
-    dt._mapping = [i for i in range(1,dt.retina_size)]
-    dt.offsets = findmin(X, dims=2)[1]
-    dt.ranges = findmax(X, dims=2)[1] - dt.offsets
-    df_offsets = vec(dt.offsets)
+    dt.mypowers = fill(2,128).^[i-1 for i in 1:128]     # it can be better!
+    dt._mapping = [i for i in 1:dt.retina_size]
+    dt.offsets = findmin(X, dims=1)[1]
+    dt.ranges = findmax(X, dims=1)[1] - dt.offsets
+    dt.offsets = vec(dt.offsets)
     dt.ranges = vec(dt.ranges)
     dt.ranges[dt.ranges .== 0] .= 1
     @showprogress 1 "Training..."  for i in 1:n_samples
@@ -135,8 +135,8 @@ function predict(dt::WiSARDClassifier, X)
 
 	y_pred = Vector{Any}(undef, n_samples)
 	@showprogress 1 "Testing..."  for i in 1:n_samples
-		cl = _test(dt, X[i, :])
-        y_pred[i] = dt.classes[cl]
+		response = _test(dt, X[i, :])
+        y_pred[i] = dt.classes[argmax(response)]
     end
     return y_pred
 end
