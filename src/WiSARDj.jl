@@ -3,7 +3,8 @@ module WiSARDj
 # Write your package code here.
 import ScikitLearnBase: BaseClassifier, BaseRegressor, predict, predict_proba,
                         fit!, get_classes, @declare_hyperparameters
-
+using Distributed
+using ProgressMeter
 ################################################################################
 # Classifier
 
@@ -36,8 +37,8 @@ Implements `fit!`, `predict`, `predict_proba`, `get_classes`
 
 ########## Types ##########
 
-include("RAM.jl")
-using RAMj: WRam, getEntry, updEntry
+include("RAMj.jl")
+using .RAMj: WRam, getEntry, updEntry
 ########## Models ##########
 
 mutable struct WiSARDClassifier <: BaseClassifier
@@ -50,12 +51,15 @@ mutable struct WiSARDClassifier <: BaseClassifier
     default_bleaching::Int
     confidence_bleaching::Float64
     debug::Bool
-    mypowers::Array{Int128}
+    mypowers::Array{Int}
     retina_size::Int
     n_rams::Int
-    wiznet::Array{Dict{Int128,Float64}}
+    wiznet #::Dict{Array{Dict{Int64,Float64}}}
     classes::Array{Any}
     n_classes::Int
+    _mapping::Array{Int}
+    ranges::Array{Float64}
+    offsets::Array{Float64}
     WiSARDClassifier(;n_bits=8,n_tics=256,random_state=0,mapping="random",
                         code="t",bleaching=true,default_bleaching=1,confidence_bleaching=0.01,debug=false) =
         new(n_bits, n_tics, random_state, mapping, code, bleaching, default_bleaching, confidence_bleaching, debug)
@@ -63,42 +67,44 @@ end
 
 get_classes(dt::WiSARDClassifier) = dt.classes
 @declare_hyperparameters(WiSARDClassifier,
-                         [:n_bits, :n_tics, :mapping, :code, :bleaching, :default_bleaching, :confidence_bleaching])
+                         [:n_bits, :n_tics, :maptype, :code, :bleaching, :default_bleaching, :confidence_bleaching])
 
 # Binarize input (thermomer encoding) terand generates address tuple for Ram access
 function _mk_tuple(dt::WiSARDClassifier, data)
-    addresses = zeros(dt.n_rams)
+    addresses = zeros(Int, dt.n_rams)
     for i in 1:dt.n_rams
         for j in 1:dt.n_bits
-            x = data[((i * dt.n_bits) + j) % dt.retina_size]
-            index = ÷(x,dt.n_tics)
-            value = ÷((data[index] -  dt.offstets[index]) * dt.n_tics, self.ranges[index])
-			if x % dt.n_tics < value
-                addresses[i] += mypowers[dt.n_tics -1 - j]
+            x = dt._mapping[(((i - 1) * dt.n_bits) + j) % (dt.retina_size + 1)]
+            index = ÷(x,dt.n_tics+1)
+            value = ÷((data[index+1] -  dt.offsets[index+1]) * dt.n_tics, dt.ranges[index+1])
+            #println(value,"-",index)
+			if x % (dt.n_tics+1) < value
+                addresses[i] += dt.mypowers[dt.n_bits - j + 1]
             end
 		end
 	end
-    addresses
+    return addresses
 end
 
-function _train(dt::WiSARDClassifier, X, y)
+function _train(dt::WiSARDClassifier, data::Vector{Float64}, y)
     """ Learning """
-    addresses = _mk_tuple(dt,X)
-    for j in 1:dt.n_bits
-        dt.wiznet[y][i].updEntry(dt.wiznet[y][i], addresses[i], 1.0)
+    addresses = _mk_tuple(dt,data)
+    #print(addresses)
+    for i in 1:dt.n_rams
+        updEntry(dt.wiznet[y][i], addresses[i], 1.0)
     end
 end
 
-function _test(dt::WiSARDClassifier, X)
+function _test(dt::WiSARDClassifier, data::Vector{Float64})
     """ Testing """
-    addresses = _mk_tuple(X)
+    addresses = _mk_tuple(dt,data)
     res = zeros(dt.n_classes, dt.n_rams)
-    for y in 1:dt.n_classes
+    for y in dt.n_classes
     	for i in 1:dt.n_rams
-    		res[y,i] = getEntry(dt.wiznet[y][i], addresses[i]) > 0 ? 1.0 : 0.0  # make it better!
+    		res[y,i] = getEntry(dt.wiznet[dt.classes[y]][i], addresses[i]) > 0 ? 1.0 : 0.0  # make it better!
     	end
     end
-    argmax(sum(x,dims=2))[1]
+    return argmax(sum(res,dims=2))[1]
 end
 
 
@@ -108,14 +114,31 @@ function fit!(dt::WiSARDClassifier, X, y)
     dt.n_rams = dt.retina_size % dt.n_bits == 0 ? ÷(dt.retina_size,dt.n_bits) : ÷(dt.retina_size,dt.n_bits + 1)
     dt.classes = unique(y)
     dt.n_classes = size(dt.classes, 1)
-    dt.wiznet = [[WRam() for _ in 1:dt.n_rams] for _ in 1:dt.n_classes]
-    dt.mypowers = fill(2,128).^[i for i in range(1,128)] # it canbe better!
-    for data in eachrow(X)
-    	_train(data, y[i])
+    dt.wiznet = Dict()
+    for c in dt.classes
+    	dt.wiznet[c] = [WRam() for _ in 1:dt.n_rams]
+    end
+    dt.mypowers = fill(2,128).^[i for i in range(0,127)] # it canbe better!
+    dt._mapping = [i for i in range(1,dt.retina_size)]
+    dt.offsets = findmin(X, dims=2)[1]
+    dt.ranges = findmax(X, dims=2)[1] - dt.offsets
+    df_offsets = vec(dt.offsets)
+    dt.ranges = vec(dt.ranges)
+    dt.ranges[dt.ranges .== 0] .= 1
+    @showprogress 1 "Training..."  for i in 1:n_samples
+    	_train(dt, X[i, :], y[i])
     end
 end
 
 function predict(dt::WiSARDClassifier, X)
+	n_samples, _ = size(X)
+
+	y_pred = Vector{Any}(undef, n_samples)
+	@showprogress 1 "Testing..."  for i in 1:n_samples
+		cl = _test(dt, X[i, :])
+        y_pred[i] = dt.classes[cl]
+    end
+    return y_pred
 end
 
 #predict_proba(dt::WiSARDClassifier, X) =
