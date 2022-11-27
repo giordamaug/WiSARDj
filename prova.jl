@@ -1,5 +1,5 @@
 include("src/WiSARDj.jl")
-using .WiSARDj: WiSARDClassifier, fit!, predict
+using .WiSARDj.MLJInterface: WiSARDClassifier
 
 function mk_tuple(dt::WiSARDClassifier, data)
     addresses = zeros(Int, dt.n_rams)
@@ -27,8 +27,9 @@ df = CSV.read("/Users/maurizio/WiSARDpy/datasets/iris.csv", DataFrames.DataFrame
 X = Matrix(select(df, Not([:species])))
 y = vec(Matrix(select(df, [:species])))
 model = WiSARDClassifier(n_bits=4,n_tics=16)
-WiSARDj.fit!(model, X, y)
+train, test = MLJ.partition(eachindex(y), 0.8, shuffle=true, rng=1)
+MLJ.fit(model, Any, X[train,:], y[train,:])
+ŷ = MLJ.predict(model, Any, X[test,:])
 
-println(X[1,:], size(X, 1))
-tpl = mk_tuple(model, X[1,:])
-print(tpl)
+#tpl = mk_tuple(model, X[1,:])
+#print(tpl)
