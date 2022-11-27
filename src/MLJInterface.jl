@@ -63,7 +63,7 @@ mutable struct WiSARDClassifier <: MLJBase.Probabilistic
     ranges::Array{Float64}
     offsets::Array{Float64}
     WiSARDClassifier(;n_bits=8,n_tics=256,random_state=0,mapping="random",
-                        code="t",bleaching=true,default_bleaching=1,confidence_bleaching=0.01,debug=false) =
+                        code="t",bleaching=false,default_bleaching=1,confidence_bleaching=0.01,debug=false) =
         new(n_bits, n_tics, random_state, mapping, code, bleaching, default_bleaching, confidence_bleaching, debug)
 end
 
@@ -85,6 +85,26 @@ function _mk_tuple(dt::WiSARDClassifier, data)
     return addresses
 end
 
+function _calc_confidence(results::Matrix{Float64})
+    # get max value
+    max_value = findmax(results)[1]
+    if (max_value == 0)  # if max is null confidence will be 0
+        return 0
+    end
+    # if there are two max values, confidence will be 0
+    position = results[results.==max_value]
+    if size(position, 1)>1
+        return 0
+    end 
+    # get second max value
+    #second_max = findmax(results[results. < max_value])[1]
+    if size(results[results.< max_value])[1] > 0
+        second_max = findmax(results[results.< max_value])[1]
+    end
+    # calculating new confidence value
+    return 1 - second_max / max_value
+end
+
 function _train(dt::WiSARDClassifier, data::Vector{Float64}, y)
     """ Learning """
     addresses = _mk_tuple(dt,data)
@@ -93,7 +113,7 @@ function _train(dt::WiSARDClassifier, data::Vector{Float64}, y)
     end
 end
 
-function _test(dt::WiSARDClassifier, data::Vector{Float64})
+function _test_nobleaching(dt::WiSARDClassifier, data::Vector{Float64})
     """ Testing """
     addresses = _mk_tuple(dt,data)
     res = zeros(dt.n_classes, dt.n_rams)
@@ -102,7 +122,43 @@ function _test(dt::WiSARDClassifier, data::Vector{Float64})
     		res[y,i] = getEntry(dt.wiznet[dt.classes[y]][i], addresses[i]) > 0 ? 1.0 : 0.0  # make it better!
     	end
     end
-    return sum(res,dims=2) #argmax(sum(res,dims=2))[1]
+    return sum(res,dims=2) 
+end
+
+function _response(dt::WiSARDClassifier, data::Vector{Float64})
+    """ Testing """
+    addresses = _mk_tuple(dt,data)
+    res = zeros(dt.n_classes, dt.n_rams)
+    for y in 1:dt.n_classes
+    	for i in 1:dt.n_rams
+    		res[y,i] = getEntry(dt.wiznet[dt.classes[y]][i], addresses[i])     # make it better!
+    	end
+    end
+    return res 
+end
+
+function _test_bleaching(dt::WiSARDClassifier, data::Vector{Float64})
+    """ Testing """
+    b = dt.default_bleaching
+    confidence = 0.0
+    res_disc = _response(dt, data)
+    result_partial = Any
+    while confidence < dt.confidence_bleaching
+        result_partial = sum(replace(x->x>=b ? 1.0 : 0.0, res_disc), dims=2)
+        confidence = _calc_confidence(result_partial)
+        b += 1
+        if (sum(result_partial) == 0)
+            result_partial = sum(replace(x->x>=1 ? 1.0 : 0.0, res_disc), dims=2)
+            break
+        end
+    end
+    result_sum = sum(result_partial, dims=1)[1]
+    if result_sum==0.0
+        result = sum(res_disc, dims=2)./ dt.nrams
+    else
+        result = sum(result_partial, dims=2)./ result_sum
+    end
+    return result
 end
 
 function MLJBase.fit(dt::WiSARDClassifier, verbosity, X, y)
@@ -134,18 +190,19 @@ function MLJBase.predict(dt::WiSARDClassifier, fitresult, X)
 	n_samples, _ = size(X)
 
 	y_pred = Vector{Any}(undef, n_samples)
+    _test = dt.bleaching ? _test_bleaching : _test_nobleaching
 	@showprogress 1 "Testing..."  for i in 1:n_samples
-        y_pred[i] = dt.classes[argmax(_test(dt, X[i, :]))]
+        y_pred[i] = dt.classes[argmax(_test(dt, X[i, :]))[1]]
     end
     return y_pred
 end
 
-function predict_proba(dt::WiSARDClassifier, X)
+function predict_proba(dt::WiSARDClassifier, X)  # there's no predict_proba in MLJ
 	n_samples, _ = size(X)
 
 	y_pred = Vector{Any}(undef, n_samples)
 	@showprogress 1 "Testing..."  for i in 1:n_samples
-        y_pred[i] = dt.classes[argmax(_test(dt, X[i, :]))]
+        y_pred[i] = _test(dt, X[i, :])
     end
     return y_pred
 end
@@ -157,4 +214,13 @@ export WiSARDCLassifier,
        # `using ScikitLearnBase`.
        predict, predict_proba, fit, get_classes
 
+function show(io::IO, dt::WiSARDClassifier)
+        println(io, "WiSARDClassifier")
+        println(io, "n_bits:                $(dt.n_bits)")
+        println(io, "n_tics:                $(dt.n_tics)")
+        println(io, "n_rams:                $(dt.n_rams)")
+        println(io, "n_retina:              $(dt.retina_size)")
 end
+    
+end
+

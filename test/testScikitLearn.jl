@@ -1,15 +1,16 @@
 
 include("../src/WiSARDj.jl")
-using .WiSARDj.SciLearnInterface: WiSARDClassifier
+using .WiSARDj.SciLearnInterface: WiSARDClassifier, fit!, predict
 
 using CSV, DataFrames, MLJ, MLBase, MLJBase
 using ScikitLearn.CrossValidation: cross_val_predict
-using ScikitLearnBase: fit!, predict
+using ScikitLearnBase
 
-df = CSV.read("/Users/maurizio/WiSARDpy/datasets/biomat_clf.csv", DataFrames.DataFrame)
+#df = CSV.read("/Users/maurizio/WiSARDpy/datasets/biomat_clf.csv", DataFrames.DataFrame)
+df = CSV.read("/Users/maurizio/WiSARDpy/datasets/iris.csv", DataFrames.DataFrame)
 
 with_cv = false
-model = WiSARDClassifier(n_bits=8, n_tics=256, debug=true)
+model = WiSARDClassifier(n_bits=8, n_tics=256, bleaching=true, debug=true)
 
 X = Matrix(DataFrames.select(df, Not([:label])))
 y = vec(Matrix(DataFrames.select(df, [:label])))
