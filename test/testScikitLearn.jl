@@ -2,7 +2,7 @@
 include("../src/WiSARDj.jl")
 using .WiSARDj.SciLearnInterface: WiSARDClassifier
 
-using CSV, DataFrames, MLJ, MLBase, MLJBase
+using CSV, DataFrames, MLJ, MLBase
 using ScikitLearn.CrossValidation: cross_val_predict
 using ScikitLearnBase
 
