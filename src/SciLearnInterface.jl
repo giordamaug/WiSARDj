@@ -1,10 +1,11 @@
 module SciLearnInterface
 
 # Write your package code here.
+import ScikitLearnBase
 #: BaseClassifier, BaseRegressor, predict, predict_proba,
 #                        fit!, get_classes, @declare_hyperparameters
-import ScikitLearnBase: BaseClassifier, BaseRegressor, predict, predict_proba,
-                        fit!, get_classes, @declare_hyperparameters
+#import ScikitLearnBase: BaseClassifier, BaseRegressor, predict, predict_proba,
+#                        fit!, get_classes, @declare_hyperparameters
 
 using Distributed
 using ProgressMeter: @showprogress, Progress, BarGlyphs
@@ -46,7 +47,7 @@ using .RAMj: WRam, getEntry, updEntry
 
 ########## Models ##########
 
-mutable struct WiSARDClassifier <: BaseClassifier
+mutable struct WiSARDClassifier
     n_bits::Int
     n_tics::Int
     random_state::Int
@@ -71,8 +72,10 @@ mutable struct WiSARDClassifier <: BaseClassifier
 end
 
 get_classes(dt::WiSARDClassifier) = dt.classes
-@declare_hyperparameters(WiSARDClassifier,
+ScikitLearnBase.@declare_hyperparameters(WiSARDClassifier,
                          [:n_bits, :n_tics, :random_state, :mapping, :code, :bleaching, :default_bleaching, :confidence_bleaching, :debug])
+
+ScikitLearnBase.is_classifier(::WiSARDClassifier) = true   # not required for transformers
 
 # Binarize input (thermomer encoding) terand generates address tuple for Ram access
 function _mk_tuple(dt::WiSARDClassifier, data)
@@ -168,7 +171,7 @@ function _test_bleaching(dt::WiSARDClassifier, data::Vector{Float64})
     return result
 end
 
-function fit!(dt::WiSARDClassifier, X, y)
+function ScikitLearnBase.fit!(dt::WiSARDClassifier, X, y)
     n_samples, n_features = size(X)
     dt.retina_size = dt.n_tics * n_features
     dt.n_rams = dt.retina_size % dt.n_bits == 0 ? ÷(dt.retina_size,dt.n_bits) : ÷(dt.retina_size,dt.n_bits + 1)
@@ -193,7 +196,7 @@ function fit!(dt::WiSARDClassifier, X, y)
     end
 end
 
-function predict(dt::WiSARDClassifier, X)
+function ScikitLearnBase.predict(dt::WiSARDClassifier, X)
 	n_samples, _ = size(X)
 
 	y_pred = Vector{Any}(undef, n_samples)
@@ -204,12 +207,13 @@ function predict(dt::WiSARDClassifier, X)
     return y_pred
 end
 
-function predict_proba(dt::WiSARDClassifier, X)
+function ScikitLearnBase.predict_proba(dt::WiSARDClassifier, X)
 	n_samples, _ = size(X)
 
 	y_pred = Vector{Any}(undef, n_samples)
+    _test = dt.bleaching ? _test_bleaching : _test_nobleaching
 	@showprogress 1 "Testing..."  for i in 1:n_samples
-        y_pred[i] = dt.classes[argmax(_test(dt, X[i, :]))]
+        y_pred[i] = _test(dt, X[i, :])
     end
     return y_pred
 end

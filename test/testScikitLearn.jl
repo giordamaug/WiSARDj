@@ -1,6 +1,6 @@
 
 include("../src/WiSARDj.jl")
-using .WiSARDj.SciLearnInterface: WiSARDClassifier, fit!, predict
+using .WiSARDj.SciLearnInterface: WiSARDClassifier
 
 using CSV, DataFrames, MLJ, MLBase, MLJBase
 using ScikitLearn.CrossValidation: cross_val_predict
@@ -19,9 +19,10 @@ if with_cv
     y_targets = y
 else
     train, test = MLJ.partition(eachindex(y), 0.8, shuffle=true, rng=1)
-    fit!(model, X[train,:], y[train,:])
-    ŷ = predict(model, X[test,:])
+    ScikitLearnBase.fit!(model, X[train,:], y[train,:])
+    ŷ = ScikitLearnBase.predict(model, X[test,:])
     y_targets = y[test,:]
+    println(ScikitLearnBase.predict_proba(model, X[test,:]))
 end
 accuracy = sum(ŷ .== y_targets) / length(y_targets)
 println("accuracy: $accuracy")
