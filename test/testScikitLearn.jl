@@ -12,8 +12,8 @@ df = CSV.read("/Users/maurizio/WiSARDpy/datasets/iris.csv", DataFrames.DataFrame
 with_cv = false
 model = WiSARDClassifier(n_bits=8, n_tics=256, bleaching=true, debug=true)
 
-X = Matrix(DataFrames.select(df, Not([:label])))
-y = vec(Matrix(DataFrames.select(df, [:label])))
+X = Matrix(DataFrames.select(df, Not([:species])))
+y = vec(Matrix(DataFrames.select(df, [:species])))
 if with_cv
     ŷ = cross_val_predict(model, X, y; cv=5)
     y_targets = y
