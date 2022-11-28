@@ -22,7 +22,7 @@ Then in order to install the package you need to run the command:
 
 To add the package from the Julia PL:
 ```julia
-Using Pkg
+using Pkg
 Pkg.add("https://github.com/giordamaug/WiSARDj")
 ```
 
@@ -89,6 +89,9 @@ or from the julia REPL:
 julia> include("test/testScikitLearn.jl")
 julia> include("test/testMLJ.jl")
 ```
+
+IN the `notebooks`folder there are also two jupyter notebooks reproducing the execution
+of the two above API examples.
 
 # History
 
