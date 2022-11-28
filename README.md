@@ -1,9 +1,10 @@
 # WiSARDj.jl
 
-This package was originally is a Julia implementation of WiSARD 
-weightless neural network model as a classification/regression method.
+This package is a Julia implementation of WiSARD 
+weightless neural network model as a classification method.
 
 # Table of Contents
+
 - [WiSARDj.jl](#wisardjjl)
 - [Table of Contents](#table-of-contents)
 - [Installation](#installation)
