@@ -90,8 +90,8 @@ julia> include("test/testScikitLearn.jl")
 julia> include("test/testMLJ.jl")
 ```
 
-IN the `notebooks`folder there are also two jupyter notebooks reproducing the execution
-of the two above API examples.
+In the `notebooks`folder there are  two jupyter notebooks reproducing the execution
+of the two test above mentioned scripts for the MLJ and ScikitLearn APIs.
 
 # History
 
