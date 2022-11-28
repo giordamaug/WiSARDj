@@ -4,8 +4,7 @@ using .WiSARDj.MLJInterface: WiSARDClassifier
 
 using CSV, DataFrames, MLJ, MLBase, MLJBase
 
-df = CSV.read("/Users/maurizio/WiSARDpy/datasets/iris.csv", DataFrames.DataFrame)
-#df = CSV.read("/Users/maurizio/WiSARDpy/datasets/biomat_clf.csv", DataFrames.DataFrame)
+df = CSV.read("./datasets/iris.csv", DataFrames.DataFrame)
 
 with_cv = true
 model = WiSARDClassifier(n_bits=4, n_tics=16, mapping="linear", bleaching=true)

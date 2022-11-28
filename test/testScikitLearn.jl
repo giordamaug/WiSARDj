@@ -6,14 +6,13 @@ using CSV, DataFrames, MLJ, MLBase, MLJBase
 using ScikitLearn.CrossValidation: cross_val_predict
 using ScikitLearnBase
 
-#df = CSV.read("/Users/maurizio/WiSARDpy/datasets/biomat_clf.csv", DataFrames.DataFrame)
-df = CSV.read("/Users/maurizio/WiSARDpy/datasets/ionosphere.csv", DataFrames.DataFrame)
+df = CSV.read("./datasets/iris.csv", DataFrames.DataFrame)
 
 with_cv = true
 model = WiSARDClassifier(n_bits=8, n_tics=256, bleaching=false, debug=true)
 
-X = Matrix(DataFrames.select(df, Not([:Class])))
-y = vec(Matrix(DataFrames.select(df, [:Class])))
+X = Matrix(DataFrames.select(df, Not([:species])))
+y = vec(Matrix(DataFrames.select(df, [:species])))
 if with_cv
     ŷ = cross_val_predict(model, X, y; cv=5)
     y_targets = y
