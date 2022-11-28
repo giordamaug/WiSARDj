@@ -7,11 +7,12 @@ weightless neural network model as a classification/regression method.
 - [WiSARDj.jl](#wisardjjl)
 - [Table of Contents](#table-of-contents)
 - [Installation](#installation)
-- [MLJ support](#mlj-support)
-- [ScikitLearnBase support](#scikitlearnbase-support)
+  - [API](#api)
+  - [MLJ support](#mlj-support)
+  - [ScikitLearnBase support](#scikitlearnbase-support)
 - [Example](#example)
-  - [History](#history)
-  - [See also](#see-also)
+- [History](#history)
+- [See also](#see-also)
 
 # Installation
 
@@ -38,10 +39,13 @@ These ccommands will install all `WiSARDj` required dependencies:
 - `Random`
 - `ScikitLearnBase`
 
-# MLJ support
+## API
 
 WiSARDj provides interface, i.e. `fit! ` and `provide` methods, according to the MLJ API.
-MLJ interface of WiSARDj can be imported and used with commands
+
+## MLJ support
+
+The MLJ interface of WiSARDj can be imported and used with commands
 
 ```julia
 julia> using .WiSARDj.MLJInterface: WiSARDClassifier
@@ -51,10 +55,9 @@ julia> MLJ.fit!(model, X, y)
 ...
 ```
 
-# ScikitLearnBase support
+## ScikitLearnBase support
 
-WiSARDj provides interface, i.e. `fit! ` and `provide` methods, according to the ScikiLearn API.
-ScikitLearnBase interface of WiSARDj can be imported and used with commands:
+The ScikitLearnBase interface of WiSARDj can be imported and used with commands:
 
 ```julia
 julia> using .WiSARDj.SciLearnInterface: WiSARDClassifier
@@ -86,7 +89,7 @@ julia> include("test/testScikitLearn.jl")
 julia> include("test/testMLJ.jl")
 ```
 
-## History
+# History
 
 The WiSARD weightless neural network model, also known as 
 RAMnets, is the basis of the first patented commercial product of a nartificial neural network machine (Wilkie, Stonham and Aleksander Recognition Device).
@@ -115,7 +118,7 @@ For more information on the WiSARD classifier implemented in the WiSARD4WEKA pac
 > multi-class classification</i>.
 > Journal of Applied Soft Computing. Vol.72. pp. 338-354<br>
 
-## See also
+# See also
 
 - M. Morciniec and R. Rohw, [The n-tuple Classier: Too Good to Ignore](http://www.haralick.org/ML/NCRG_95_013.pdf), *1995*
 
