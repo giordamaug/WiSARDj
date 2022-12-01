@@ -8,10 +8,11 @@ weightless neural network model as a classification and regression methods.
 - [WiSARDj.jl](#wisardjjl)
 - [Table of Contents](#table-of-contents)
 - [Installation](#installation)
-  - [API](#api)
+- [API](#api)
   - [MLJ support](#mlj-support)
   - [ScikitLearnBase support](#scikitlearnbase-support)
 - [Example](#example)
+  - [Jupyter notebooks](#jupyter-notebooks)
 - [History](#history)
 - [See also](#see-also)
 
@@ -35,7 +36,7 @@ These ccommands will install all `WiSARDj` required dependencies:
 - `Random`
 - `ScikitLearnBase`
 
-## API
+# API
 
 WiSARDj provides interface, i.e. `fit! ` and `provide` methods, according to the MLJ API.
 
