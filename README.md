@@ -26,11 +26,6 @@ using Pkg
 Pkg.add("https://github.com/giordamaug/WiSARDj")
 ```
 
-Otherwise from the Julia package shell
-
-```julia
-pkg> add "https://github.com/giordamaug/WiSARDj"
-```
 
 These ccommands will install all `WiSARDj` required dependencies:
 
