@@ -84,9 +84,10 @@ or from the julia REPL:
 julia> include("test/testScikitLearn_Classification.jl")
 julia> include("test/testMLJ_Classification.jl")
 ```
+## Jupyter notebooks
 
-In the `notebooks`folder there are  two jupyter notebooks reproducing the execution
-of the two test above mentioned scripts for the MLJ and ScikitLearn APIs.
+In the `notebooks`folder we provide  two jupyter notebooks reproducing examples
+of classification and regression with WiSARDj, respectively by using the MLJ and the ScikitLearnBase API.
 
 # History
 
