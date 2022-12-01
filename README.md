@@ -119,7 +119,7 @@ For more information on the WiSARD classifier implemented in the WiSARD4WEKA pac
 
 # See also
 
-- M. Morciniec and R. Rohw, [The n-tuple Classier: Too Good to Ignore](http://www.haralick.org/ML/NCRG_95_013.pdf), *1995*
+- M. Morciniec and R. Rohw, [The n-tuple Classifier: Too Good to Ignore](http://www.haralick.org/ML/NCRG_95_013.pdf), *1995*
 
 - I. Aleksander, M. D. Gregorio, F. França, P. Lima, H. Morton, [A brief introduction to Weightless Neural Systems](https://www.semanticscholar.org/paper/A-brief-introduction-to-Weightless-Neural-Systems-Aleksander-Gregorio/25a367c108745dbc3c3729e683b645d09c6dd23b), published din *The European Symposium on Artificial Neural Networks 2009* .
 
