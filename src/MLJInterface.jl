@@ -39,7 +39,7 @@ Implements `fit!`, `predict`, `predict_proba`, `get_classes`
 ########## Types ##########
 
 include("RAMj.jl")
-using .RAMj: WRam, getEntry, updEntry
+using .RAMj: WRam, RRam, getEntry, updEntry
 
 ########## Models ##########
 
@@ -173,7 +173,7 @@ function MLJBase.fit(dt::WiSARDClassifier, verbosity, X, y)
     end
     dt.mypowers = fill(2,128).^[i-1 for i in 1:128]     # it can be better!
     dt._mapping = [i for i in 1:dt.retina_size]
-    if dt.debug
+    if dt.mapping  == "random"
         shuffle!(dt._mapping)
     end
     dt.offsets = findmin(X, dims=1)[1]
@@ -207,13 +207,6 @@ function predict_proba(dt::WiSARDClassifier, X)  # there's no predict_proba in M
     return y_pred
 end
 
-# ScikitLearn API
-export WiSARDCLassifier,
-       # Should we export these functions? They have a conflict with
-       # DataFrames/RDataset over fit!, and users can always
-       # `using ScikitLearnBase`.
-       predict, predict_proba, fit, get_classes
-
 function show(io::IO, dt::WiSARDClassifier)
         println(io, "WiSARDClassifier")
         println(io, "n_bits:                $(dt.n_bits)")
@@ -222,5 +215,134 @@ function show(io::IO, dt::WiSARDClassifier)
         println(io, "n_retina:              $(dt.retina_size)")
 end
     
+################################################################################
+# Regressor
+
+"""
+    WiSARDRegressor(;  n_bits::Int=8, 
+                        n_tics::Int=256, 
+                        random_state::Int=0, 
+                        mapping::string='random', 
+                        code::string='t', 
+                        debug::Bool=False   
+                           )
+
+Hyperparameters:
+
+- `n_bits`: 
+- `n_tics`: 
+- `random_state`: 
+- `mapping`: 
+- `code`: 
+- `debug`: 
+
+Implements `fit!`, `predict`
+"""
+
+########## Types ##########
+
+mutable struct WiSARDRegressor <: MLJBase.Probabilistic
+    n_bits::Int
+    n_tics::Int
+    random_state::Int
+    mapping::String
+    code::String
+    debug::Bool
+    mypowers::Array{Int}
+    retina_size::Int
+    n_rams::Int
+    _rams #::Array{Dict{Int64,Tuple{Float64, Float64}}}
+    _mapping::Array{Int}
+    ranges::Array{Float64}
+    offsets::Array{Float64}
+    WiSARDRegressor(;n_bits=8,n_tics=256,random_state=0,mapping="random",code="t",debug=false) =
+        new(n_bits, n_tics, random_state, mapping, code, debug)
+end
+
+# Binarize input (thermomer encoding) terand generates address tuple for Ram access
+function _mk_tuple(dt::WiSARDRegressor, data)
+    addresses = zeros(Int, dt.n_rams)
+    count = 0
+    for i in 0:dt.n_rams-1
+        for j in 0:dt.n_bits-1
+            x = dt._mapping[(i * dt.n_bits + j) % (dt.retina_size)+1] - 1
+            index = div(x,(dt.n_tics))
+            value = div((data[index+1] -  dt.offsets[index+1]) * dt.n_tics, dt.ranges[index+1])
+            if x % dt.n_tics < value
+                addresses[i+1] += dt.mypowers[dt.n_bits - j]
+            end
+            count += 1
+        end
+    end
+    return addresses
+end
+
+function _train(dt::WiSARDRegressor, data::Vector{Float64}, y)
+    """ Learning """
+    addresses = _mk_tuple(dt,data)
+    for i in 1:dt.n_rams
+        updEntry(dt._rams[i], addresses[i], y)
+    end
+end
+
+function _test(dt::WiSARDRegressor, data::Vector{Float64})
+    """ Testing """
+    addresses = _mk_tuple(dt,data)
+    res = reduce((x, y) -> x .+ y, [ getEntry(dt._rams[i], addresses[i]) for i in 1:dt.n_rams])
+    result = res[1] != 0 ? res[2] / res[1] : 0.0
+end
+
+
+function MLJBase.fit(dt::WiSARDRegressor, verbosity, X, y)
+    n_samples, n_features = size(X)
+    dt.retina_size = dt.n_tics * n_features
+    dt.n_rams = dt.retina_size % dt.n_bits == 0 ? ÷(dt.retina_size,dt.n_bits) : ÷(dt.retina_size,dt.n_bits + 1)
+    dt._rams = [RRam() for _ in 1:dt.n_rams]
+    dt.mypowers = fill(2,128).^[i-1 for i in 1:128]     # it can be better!
+    dt._mapping = [i for i in 1:dt.retina_size]
+    if dt.mapping  == "random"
+        shuffle!(dt._mapping)
+    end
+    dt.offsets = findmin(X, dims=1)[1]
+    dt.ranges = findmax(X, dims=1)[1] - dt.offsets
+    dt.offsets = vec(dt.offsets)
+    dt.ranges = vec(dt.ranges)
+    dt.ranges[dt.ranges .== 0] .= 1
+    @showprogress 1 "Training..." for i in 1:n_samples
+        _train(dt, X[i, :], y[i])
+    end
+end
+
+function MLJBase.predict(dt::WiSARDRegressor, fitresult, X)
+    n_samples, _ = size(X)
+
+    y_pred = Vector{Float64}(undef, n_samples)
+    @showprogress 1 "Testing..."  for i in 1:n_samples
+        y_pred[i] = _test(dt, X[i, :])
+    end
+    return y_pred
+end
+
+
+function show(io::IO, dt::WiSARDRegressor)
+        println(io, "WiSARDRegressor")
+        println(io, "n_bits:                $(dt.n_bits)")
+        println(io, "n_tics:                $(dt.n_tics)")
+        println(io, "n_rams:                $(dt.n_rams)")
+        println(io, "n_retina:              $(dt.retina_size)")
+end
+
+################# MLJ API #################
+
+export WiSARDCLassifier,
+       # Should we export these functions? They have a conflict with
+       # DataFrames/RDataset over fit!, and users can always
+       # `using ScikitLearnBase`.
+       predict, predict_proba, fit!, get_classes
+export WiSARDREgressor,
+       # Should we export these functions? They have a conflict with
+       # DataFrames/RDataset over fit!, and users can always
+       # `using ScikitLearnBase`.
+       predict, fit!
 end
 

@@ -1,7 +1,7 @@
 # WiSARDj.jl
 
 This package is a Julia implementation of WiSARD 
-weightless neural network model as a classification method.
+weightless neural network model as a classification and regression methods.
 
 # Table of Contents
 
@@ -75,14 +75,14 @@ To run the tests you need these additional packages installed on your syste.
 The scripts can be run by the shell commands:
 
 ```shell
-> julia testScikitLearn.jl
-> julia testMLJ.jl
+> julia testScikitLearn_Classification.jl
+> julia testMLJ_Classification.jl
 ```
 or from the julia REPL:
 
 ```julia
-julia> include("test/testScikitLearn.jl")
-julia> include("test/testMLJ.jl")
+julia> include("test/testScikitLearn_Classification.jl")
+julia> include("test/testMLJ_Classification.jl")
 ```
 
 In the `notebooks`folder there are  two jupyter notebooks reproducing the execution
