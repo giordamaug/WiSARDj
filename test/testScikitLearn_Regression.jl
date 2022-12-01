@@ -9,7 +9,7 @@ using Metrics
 df = CSV.read("./datasets/boston.csv", DataFrames.DataFrame)
 
 with_cv = true
-model = WiSARDRegressor(n_bits=8, n_tics=256, debug=true)
+model = WiSARDRegressor(n_bits=64, n_tics=1024, debug=true)
 
 X = Matrix(DataFrames.select(df, Not([:medv])))
 y = vec(Matrix(DataFrames.select(df, [:medv])))
@@ -23,3 +23,5 @@ R2 = Metrics.r2_score(vec(ŷ), y_targets)
 println("Mean absolute error: $MAE")
 println("Mean Squared Error: $MSE")
 println("Coefficient of Determination: $R2")
+using Plots
+plot(hcat(y_targets, vec(ŷ)), label=["target" "preds"])

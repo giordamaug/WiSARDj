@@ -161,7 +161,7 @@ function _test_bleaching(dt::WiSARDClassifier, data::Vector{Float64})
     return result
 end
 
-function MLJBase.fit(dt::WiSARDClassifier, verbosity, X, y)
+function MLJBase.fit!(dt::WiSARDClassifier, verbosity, X, y)
     n_samples, n_features = size(X)
     dt.retina_size = dt.n_tics * n_features
     dt.n_rams = dt.retina_size % dt.n_bits == 0 ? ÷(dt.retina_size,dt.n_bits) : ÷(dt.retina_size,dt.n_bits + 1)
@@ -293,7 +293,7 @@ function _test(dt::WiSARDRegressor, data::Vector{Float64})
 end
 
 
-function MLJBase.fit(dt::WiSARDRegressor, verbosity, X, y)
+function MLJBase.fit!(dt::WiSARDRegressor, verbosity, X, y)
     n_samples, n_features = size(X)
     dt.retina_size = dt.n_tics * n_features
     dt.n_rams = dt.retina_size % dt.n_bits == 0 ? ÷(dt.retina_size,dt.n_bits) : ÷(dt.retina_size,dt.n_bits + 1)
@@ -339,7 +339,7 @@ export WiSARDCLassifier,
        # DataFrames/RDataset over fit!, and users can always
        # `using ScikitLearnBase`.
        predict, predict_proba, fit!, get_classes
-export WiSARDREgressor,
+export WiSARDRegressor,
        # Should we export these functions? They have a conflict with
        # DataFrames/RDataset over fit!, and users can always
        # `using ScikitLearnBase`.
